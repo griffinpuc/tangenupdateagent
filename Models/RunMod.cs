@@ -29,4 +29,34 @@ namespace tdp_update_agent.Models
             return JsonConvert.SerializeObject(this, Formatting.Indented);
         }
     }
+
+    public class ResultMod
+    {
+
+        public int Id { get; set; }
+        public string name { get; set; }
+        public string outcomeCode { get; set; }
+        public string outcomeString { get; set; }
+
+    }
+
+    public class TargetMod
+    {
+
+        public int Id { get; set; }
+        public string targetId { get; set; }
+        public string name { get; set; }
+        public string outcomeCode { get; set; }
+        public string outcomeString { get; set; }
+
+    }
+
+    public class WellMod
+    {
+
+        public int Id { get; set; }
+        public string wellId { get; set; }
+        public string species { get; set; }
+        public string cq { get; set; }
+    }
 }

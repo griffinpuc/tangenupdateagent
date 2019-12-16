@@ -61,3 +61,11 @@ C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3
 C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\runtimes\win\lib\netcoreapp2.1\Microsoft.Data.SqlClient.dll
 C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\runtimes\unix\lib\netcoreapp2.0\System.Runtime.Caching.dll
 C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\runtimes\win\lib\netcoreapp2.0\System.Runtime.Caching.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\tdp-update-agent.deps.json
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\tdp-update-agent.runtimeconfig.json
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\tdp-update-agent.runtimeconfig.dev.json
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\tdp-update-agent.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\tdp-update-agent.pdb
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\Newtonsoft.Json.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\obj\Debug\netcoreapp3.0\tdp-update-agent.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\obj\Debug\netcoreapp3.0\tdp-update-agent.pdb
