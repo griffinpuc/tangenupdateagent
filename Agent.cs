@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNet.SignalR.Client;
+﻿//using Microsoft.AspNet.SignalR.Client;
+using Microsoft.AspNetCore.SignalR.Client;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -6,6 +7,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using tdp_update_agent.Models;
 
 namespace tdp_update_agent
@@ -13,21 +15,26 @@ namespace tdp_update_agent
     class Agent
     {
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
 
             databaseContext _context = new databaseContext();
+            String uri = "https://localhost:44385/dataHub";
+
             Console.WriteLine("Starting database update agent...");
+            Console.WriteLine("Database Connection: {0}", _context.getConnection());
+            Console.WriteLine("SignalR Hub: {0}", uri);
+            Console.WriteLine("Establishing connection to webserver...");
 
-            var hubConnection = new HubConnection("http://192.168.1.13");
-
+            Signal signal = new Signal();
+            await signal.Start(uri);
 
             foreach (InstrumentMod instrument in _context.getInstruments())
             {
                 StatusCheck status = new StatusCheck(instrument, _context);
             }
 
-            foreach(InstrumentMod instrument in _context.getOnline())
+            foreach (InstrumentMod instrument in _context.getOnline())
             {
                 RunCheck check = new RunCheck(instrument, _context);
             }
@@ -35,6 +42,32 @@ namespace tdp_update_agent
         }
 
     }
+
+    class Signal
+    {
+        HubConnection connection;
+
+        public async Task Start(string uri)
+        {
+            this.connection = new HubConnectionBuilder().WithUrl(uri).Build();
+
+            await connection.StartAsync();
+
+            if (connection.State.Equals(HubConnectionState.Connected))
+            {
+                Console.WriteLine("Established connection to webserver with SignalR");
+            }
+            else
+            {
+                Console.WriteLine("Failed to establish connection to webserver with SignalR");
+                Console.WriteLine("You may continue to start Update Agent, though real-time page updates will be disabled.");
+                Console.WriteLine("Press any key to continue, or exit...");
+                Console.ReadLine();
+            }
+        }
+
+    }
+
 
     class StatusCheck
     {

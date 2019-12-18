@@ -75,3 +75,10 @@ C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3
 C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\System.IO.Pipelines.dll
 C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\System.Text.Encodings.Web.dll
 C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\System.Text.Json.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\Microsoft.AspNet.SignalR.Client.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\Microsoft.AspNetCore.Http.Connections.Client.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\Microsoft.AspNetCore.Http.Connections.Common.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\Microsoft.AspNetCore.SignalR.Client.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\Microsoft.AspNetCore.SignalR.Client.Core.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\Microsoft.AspNetCore.SignalR.Protocols.Json.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\System.Threading.Channels.dll
