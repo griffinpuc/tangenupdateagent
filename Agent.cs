@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.AspNet.SignalR.Client;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,26 +19,19 @@ namespace tdp_update_agent
             databaseContext _context = new databaseContext();
             Console.WriteLine("Starting database update agent...");
 
-            while (true){
+            var hubConnection = new HubConnection("http://192.168.1.13");
 
-                foreach(InstrumentMod instrument in _context.getInstruments())
-                {
-                    StatusCheck status = new StatusCheck(instrument, _context);
-                }
 
-                foreach(InstrumentMod instrument in _context.getOnline())
-                {
-                    RunCheck check = new RunCheck(instrument, _context);
-                }
-
-                Thread.Sleep(10000);
-
+            foreach (InstrumentMod instrument in _context.getInstruments())
+            {
+                StatusCheck status = new StatusCheck(instrument, _context);
             }
-        }
 
-        public void WriteLog(string message)
-        {
-            Console.WriteLine("[" + DateTime.Now + "] " + message);
+            foreach(InstrumentMod instrument in _context.getOnline())
+            {
+                RunCheck check = new RunCheck(instrument, _context);
+            }
+
         }
 
     }
@@ -58,46 +52,53 @@ namespace tdp_update_agent
 
         public void CheckUpdate()
         {
-            Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getInstrumentStatus");
-            HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
-
-            request.ContentType = "application/json; charset=utf-8";
-            request.Method = "GET";
-            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
-
-            Console.Write(DateTime.Now + " [GET STATUS]: ");
-            Console.WriteLine("From " + this.instrument.name);
-
-            try
+            while (true)
             {
-                var response = request.GetResponse() as HttpWebResponse;
+                Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getInstrumentStatus");
+                HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
 
-                using (Stream responseStream = response.GetResponseStream())
+                request.ContentType = "application/json; charset=utf-8";
+                request.Method = "GET";
+                request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
+
+                Console.Write(DateTime.Now + " [GET STATUS]: ");
+                Console.WriteLine("From " + this.instrument.name);
+
+                try
                 {
-                    StreamReader reader = new StreamReader(responseStream, Encoding.UTF8);
-                    if (reader.ReadToEnd().Contains("IDLE"))
+                    var response = request.GetResponse() as HttpWebResponse;
+
+                    using (Stream responseStream = response.GetResponseStream())
                     {
-                        this._context.setStatus(this.instrument, "IDLE");
-                    }
-                    else if (reader.ReadToEnd().Contains("OFFLINE"))
-                    {
-                        this._context.setStatus(this.instrument, "OFFLINE");
-                    }
-                    else if (reader.ReadToEnd().Contains("BUSY"))
-                    {
-                        this._context.setStatus(this.instrument, "BUSY");
-                    }
-                    else
-                    {
-                        this._context.setStatus(this.instrument, "ERROR");
+                        StreamReader reader = new StreamReader(responseStream, Encoding.UTF8);
+                        if (reader.ReadToEnd().Contains("IDLE"))
+                        {
+                            this._context.setStatus(this.instrument, "IDLE");
+                        }
+                        else if (reader.ReadToEnd().Contains("OFFLINE"))
+                        {
+                            this._context.setStatus(this.instrument, "OFFLINE");
+                        }
+                        else if (reader.ReadToEnd().Contains("BUSY"))
+                        {
+                            this._context.setStatus(this.instrument, "BUSY");
+                        }
+                        else
+                        {
+                            this._context.setStatus(this.instrument, "ERROR");
+                        }
                     }
                 }
+                catch (Exception ex)
+                {
+                    Console.Write(DateTime.Now + " [ERROR STATUS]: ");
+                    Console.WriteLine(ex.Message);
+                }
+
+                Thread.Sleep(10000);
+
             }
-            catch(Exception ex)
-            {
-                Console.Write(DateTime.Now + " [ERROR]: ");
-                Console.WriteLine(ex.Message);
-            }
+
            
         }
     }
@@ -118,32 +119,40 @@ namespace tdp_update_agent
 
         public void GetRuns()
         {
-            Console.Write(DateTime.Now + " [GET RUN LIST]: ");
-            Console.WriteLine("From " + this.instrument.name);
-            Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getResults");
-            System.Net.HttpWebRequest request = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(URI);
-            request.ContentType = "application/json; charset=utf-8";
-            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
-
-            try
+            while (true)
             {
-                var response = request.GetResponse() as HttpWebResponse;
-                using (Stream responseStream = response.GetResponseStream())
+                Console.Write(DateTime.Now + " [GET RUN LIST]: ");
+                Console.WriteLine("From " + this.instrument.name);
+                Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getResults");
+                System.Net.HttpWebRequest request = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(URI);
+                request.ContentType = "application/json; charset=utf-8";
+                request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
+
+                try
                 {
-                    StreamReader reader = new StreamReader(responseStream, Encoding.UTF8);
-                    JsonSerializer serializer = new JsonSerializer();
+                    var response = request.GetResponse() as HttpWebResponse;
+                    using (Stream responseStream = response.GetResponseStream())
+                    {
+                        StreamReader reader = new StreamReader(responseStream, Encoding.UTF8);
+                        JsonSerializer serializer = new JsonSerializer();
 
-                    List<string> ids = new List<string>();
-                    Array.ForEach(JsonConvert.DeserializeObject<Result[]>(reader.ReadToEnd()), res => ids.Add(res.uniqueId));
-                    foreach (string id in this._context.getUniqueIds(ids.ToArray())) { _context.addRun(GetRun(id)); }
+                        List<string> ids = new List<string>();
+                        Array.ForEach(JsonConvert.DeserializeObject<Result[]>(reader.ReadToEnd()), res => ids.Add(res.uniqueId));
+                        //foreach(string id in this._context.getUniqueIds(ids.ToArray())) { Console.WriteLine(id); }
+                        foreach (string id in this._context.getUniqueIds(ids.ToArray())) { _context.addRun(GetRun(id)); }
+                    }
                 }
+
+                catch (Exception ex)
+                {
+                    Console.Write(DateTime.Now + " [ERROR GETRUNS]: ");
+                    Console.WriteLine(ex.Message);
+                }
+
+                Thread.Sleep(10000);
+
             }
 
-            catch (Exception ex)
-            {
-                Console.Write(DateTime.Now + " [ERROR]: ");
-                Console.WriteLine(ex.Message);
-            }
 
         }
 
@@ -158,26 +167,16 @@ namespace tdp_update_agent
             request.ContentType = "application/json; charset=utf-8";
             request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
 
-            try
-            {
-                var response = request.GetResponse() as HttpWebResponse;
+            var response = request.GetResponse() as HttpWebResponse;
 
-                using (Stream responseStream = response.GetResponseStream())
-                {
-                    StreamReader reader = new StreamReader(responseStream, Encoding.UTF8);
-                    JsonSerializer serializer = new JsonSerializer();
-
-                    return JsonConvert.DeserializeObject<RunMod>(reader.ReadToEnd());
-                }
-            }
-            catch(Exception ex)
+            using (Stream responseStream = response.GetResponseStream())
             {
-                Console.WriteLine("get run fail");
-                Console.Write(DateTime.Now + " [ERROR]: ");
-                Console.WriteLine(ex.Message);
+                StreamReader reader = new StreamReader(responseStream, Encoding.UTF8);
+                JsonSerializer serializer = new JsonSerializer();
+
+                return JsonConvert.DeserializeObject<RunMod>(reader.ReadToEnd());
             }
 
-            return null;
 
         }
 

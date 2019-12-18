@@ -69,3 +69,9 @@ C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3
 C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\Newtonsoft.Json.dll
 C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\obj\Debug\netcoreapp3.0\tdp-update-agent.dll
 C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\obj\Debug\netcoreapp3.0\tdp-update-agent.pdb
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\Microsoft.AspNetCore.Connections.Abstractions.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\Microsoft.AspNetCore.Http.Features.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\Microsoft.AspNetCore.SignalR.Common.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\System.IO.Pipelines.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\System.Text.Encodings.Web.dll
+C:\Users\griff\Workspace\tdp-update-agent\tdp-update-agent\bin\Debug\netcoreapp3.0\System.Text.Json.dll

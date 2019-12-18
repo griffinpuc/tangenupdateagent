@@ -29,8 +29,16 @@ namespace tdp_update_agent
 
         public string[] getUniqueIds(string[] ids)
         {
-            return (from RunMod in RunTable where !ids.Contains(RunMod.uniqueId) select RunMod.uniqueId).ToArray();
+            string[] db_ids = (from RunMod in RunTable select RunMod.uniqueId).ToArray();
+
+            //for (int i= 0; i < ids.Length; i++)
+            //{
+            //    Console.WriteLine(ids[i] + ":" + db_ids[i]);
+            //}
+
+            return ids.Except(db_ids).ToArray();
         }
+        
 
         public void setStatus(InstrumentMod instrument, string status)
         {
