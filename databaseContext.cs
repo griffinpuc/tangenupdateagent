@@ -47,9 +47,8 @@ namespace tdp_update_agent
         }
         
 
-        public void setStatus(InstrumentMod instrument, string status)
+        public void setStatus(InstrumentMod instrument)
         {
-            instrument.status = status;
             Update(instrument);
             SaveChanges();
         }

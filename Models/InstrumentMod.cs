@@ -15,5 +15,21 @@ namespace tdp_update_agent.Models
         public string lastPing { get; set; }
         public DateTime dateAdded { get; set; }
 
+        public string getColor()
+        {
+            if (this.status.Equals("IDLE"))
+            {
+                return ("#7fba00");
+            }
+            else if (this.status.Equals("BUSY"))
+            {
+                return ("#ffb900");
+            }
+            else
+            {
+                return ("#f25022");
+            }
+        }
+
     }
 }
