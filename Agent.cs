@@ -6,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,17 +17,21 @@ namespace tdp_update_agent
 {
     class Agent
     {
+        public static List<Thread> startedThreads = new List<Thread>();
 
         static async Task Main(string[] args)
         {
 
             databaseContext _context = new databaseContext();
-            String uri = "https://localhost:44385/dataHub";
+            //String uri = "https://localhost:44385/dataHub";
+            String uri = "http://localhost/dataHub";
+            List<int> instrumentList = new List<int>();
 
             Console.WriteLine("Starting database update agent...");
             Console.WriteLine("SignalR Hub: {0}", uri);
             Console.WriteLine("Establishing connection to webserver...");
 
+            ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
             Signal signal = new Signal();
             await signal.Start(uri);
 
@@ -33,10 +39,24 @@ namespace tdp_update_agent
 
             Console.WriteLine("----------------------------");
 
-            foreach (InstrumentMod instrument in _context.getInstruments())
+            while (true)
             {
-                Update update = new Update(instrument, _context, _connection);
+                foreach (InstrumentMod instrument in _context.getInstruments())
+                {
+                    Update update = new Update(instrument, _connection);
+                    Thread thread = new Thread(new ThreadStart(update.Updater));
+                    thread.Start();
+                    startedThreads.Add(thread);
+                }
+
+                foreach (Thread thread in startedThreads)
+                {
+                    thread.Join();
+                }
+
+                Thread.Sleep(10000);
             }
+
 
         }
 
@@ -48,28 +68,12 @@ namespace tdp_update_agent
 
         public async Task Start(string uri)
         {
-            this.connection = new HubConnectionBuilder().WithUrl(uri).Build();
-
+            try{ this.connection = new HubConnectionBuilder().WithUrl(uri).Build(); }
+            catch(Exception ex){ Console.WriteLine(ex.GetType()); }
             await connection.StartAsync();
-
-            if (connection.State.Equals(HubConnectionState.Connected))
-            {
-                Console.WriteLine("Established connection to webserver with SignalR");
-            }
-            else
-            {
-                Console.WriteLine("Failed to establish connection to webserver with SignalR");
-                Console.WriteLine("You may continue to start Update Agent, though real-time page updates will be disabled.");
-                Console.WriteLine("Press any key to continue, or exit...");
-                Console.ReadLine();
-            }
-
         }
 
-        public HubConnection getConnection()
-        {
-            return this.connection;
-        }
+        public HubConnection getConnection(){ return this.connection; }
 
     }
 
@@ -80,30 +84,17 @@ namespace tdp_update_agent
         HubConnection _connection;
         databaseContext _context;
 
-        public Update(InstrumentMod instrument, databaseContext context, HubConnection connection)
+        string ln;
+
+        public Update(InstrumentMod instrument, HubConnection connection)
         {
             this.instrument = instrument;
-            this._context = context;
+            this._context = new databaseContext();
             this._connection = connection;
-
-
-            Thread thread = new Thread(new ThreadStart(Updater));
-            thread.Start();
             
-
         }
 
-        public void Updater()
-        {
-            while (true)
-            {
-                CheckUpdate();
-                GetRuns();
-
-                Thread.Sleep(10000);
-            }
-
-        }
+        public void Updater(){ CheckUpdate(); GetRuns(); }
 
         public void CheckUpdate()
         {
@@ -114,8 +105,9 @@ namespace tdp_update_agent
             request.Method = "GET";
             request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
 
-            Console.Write(DateTime.Now + " [GET STATUS]: ");
-            Console.Write("From {0}: ", this.instrument.name);
+            ln = new StringBuilder().AppendFormat(DateTime.Now + " [{0} GET STAT]", this.instrument.name).ToString();
+            Console.WriteLine(ln);
+            this._connection.InvokeAsync("streamline", ln);
 
             try
             {
@@ -130,17 +122,16 @@ namespace tdp_update_agent
                     _context.setStatus(this.instrument);
 
                     this._connection.InvokeAsync("updatestatus", this.instrument.status, this.instrument.ID, this.instrument.getColor());
-
-                    Console.WriteLine(this.instrument.status);
                 }
             }
             catch (Exception ex)
             {
                 this.instrument.status = "OFFLINE";
-                Console.WriteLine("OFFLINE");
                 _context.setStatus(this.instrument);
                 this._connection.InvokeAsync("updatestatus", this.instrument.status, this.instrument.ID, this.instrument.getColor());
-                Console.WriteLine("{0} [ERROR STATUS]: {1}...", DateTime.Now, ex.Message.Substring(0, 100));
+                ln = new StringBuilder().AppendFormat("{0} [{2} ERROR]: {1}...", DateTime.Now, ex.Message, this.instrument.name).ToString();
+                Console.WriteLine(ln);
+                this._connection.InvokeAsync("streamline", ln);
             }
 
             Thread.Sleep(1000);
@@ -151,8 +142,7 @@ namespace tdp_update_agent
         {
             if(this.instrument.status.Equals("IDLE"))
             {
-                Console.Write(DateTime.Now + " [GET RUN LIST]: ");
-                Console.WriteLine("From " + this.instrument.name);
+                Console.WriteLine(DateTime.Now + " [{0} GET RUNS]", this.instrument.name);
                 Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getResults");
                 System.Net.HttpWebRequest request = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(URI);
                 request.ContentType = "application/json; charset=utf-8";
@@ -174,11 +164,10 @@ namespace tdp_update_agent
 
                 catch (Exception ex)
                 {
-                    Console.Write(DateTime.Now + " [ERROR GETRUNS]: ");
-                    Console.WriteLine(ex.Message);
+                    ln = new StringBuilder().AppendFormat(DateTime.Now + " [{0} ERROR]: {1} ", this.instrument.name, ex.Message).ToString();
+                    Console.WriteLine(ln);
+                    this._connection.InvokeAsync("streamline", ln);
                 }
-
-                Thread.Sleep(1000);
 
             }
 
@@ -190,8 +179,7 @@ namespace tdp_update_agent
             Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getTestResult?id=" + uniqueid);
             HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
 
-            Console.Write(DateTime.Now + " [GET RUN]: ");
-            Console.WriteLine(uniqueid);
+            Console.WriteLine(DateTime.Now + " [GET RUN]: " + uniqueid);
 
             request.ContentType = "application/json; charset=utf-8";
             request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
