@@ -24,7 +24,8 @@ namespace tdp_update_agent
 
             databaseContext _context = new databaseContext();
             //String uri = "https://localhost:44385/dataHub";
-            String uri = "http://localhost/dataHub";
+            //String uri = "http://localhost/dataHub";
+            String uri = "http://192.168.1.13/dataHub";
             List<int> instrumentList = new List<int>();
 
             Console.WriteLine("Starting database update agent...");
@@ -94,7 +95,11 @@ namespace tdp_update_agent
             
         }
 
-        public void Updater(){ CheckUpdate(); GetRuns(); }
+        public void Updater(){ 
+            CheckUpdate();
+            Thread.Sleep(500);
+            GetRuns();
+        }
 
         public void CheckUpdate()
         {
@@ -132,19 +137,17 @@ namespace tdp_update_agent
                 ln = new StringBuilder().AppendFormat("{0} [{2} ERROR]: {1}...", DateTime.Now, ex.Message, this.instrument.name).ToString();
                 Console.WriteLine(ln);
                 this._connection.InvokeAsync("streamline", ln);
+                Console.WriteLine();
             }
-
-            Thread.Sleep(1000);
-
         }
 
         public void GetRuns()
         {
-            if(this.instrument.status.Equals("IDLE"))
+            if (this.instrument.status.Equals("IDLE"))
             {
                 Console.WriteLine(DateTime.Now + " [{0} GET RUNS]", this.instrument.name);
                 Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getResults");
-                System.Net.HttpWebRequest request = (System.Net.HttpWebRequest)System.Net.HttpWebRequest.Create(URI);
+                HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
                 request.ContentType = "application/json; charset=utf-8";
                 request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
 
@@ -158,7 +161,21 @@ namespace tdp_update_agent
 
                         List<string> ids = new List<string>();
                         Array.ForEach(JsonConvert.DeserializeObject<Result[]>(reader.ReadToEnd()), res => ids.Add(res.uniqueId));
-                        foreach (string id in this._context.getUniqueIds(ids.ToArray())) { _context.addRun(GetRun(id)); }
+
+                        foreach (string id in this._context.getUniqueIds(ids.ToArray())) {
+                            string dirpointer = GetRaw(id);
+                            if (dirpointer != null)
+                            {
+                                RunMod newRun = GetRun(id);
+                                newRun.DirPointer = dirpointer;
+                                _context.addRun(newRun);
+                            }
+                            else { 
+                                Console.WriteLine("{0} [{1} ERROR] Run NOT SAVED due to run download error.", DateTime.Now, this.instrument.name);
+                                Console.WriteLine("{0} [{1} ERROR] Exiting run/raw upload process...", DateTime.Now, this.instrument.name);
+                                break;
+                            }
+                        }
                     }
                 }
 
@@ -167,6 +184,7 @@ namespace tdp_update_agent
                     ln = new StringBuilder().AppendFormat(DateTime.Now + " [{0} ERROR]: {1} ", this.instrument.name, ex.Message).ToString();
                     Console.WriteLine(ln);
                     this._connection.InvokeAsync("streamline", ln);
+                    Console.WriteLine();
                 }
 
             }
@@ -176,6 +194,7 @@ namespace tdp_update_agent
 
         public RunMod GetRun(string uniqueid)
         {
+            Thread.Sleep(500);
             Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getTestResult?id=" + uniqueid);
             HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
 
@@ -193,9 +212,47 @@ namespace tdp_update_agent
 
                 return JsonConvert.DeserializeObject<RunMod>(reader.ReadToEnd());
             }
+        }
 
+        public string GetRaw(string uniqueid)
+        {
+            Thread.Sleep(1000);
+            string retval = null;
+            string filename = uniqueid + "_RAW.json";
+
+            Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getRawResult?id=" + uniqueid);
+            HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
+
+            Console.WriteLine(DateTime.Now + " [GET RAW FILE]: " + uniqueid);
+
+            request.ContentType = "application/json; charset=utf-8";
+            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
+
+            try
+            {
+                var response = request.GetResponse() as HttpWebResponse;
+
+                using (Stream responseStream = response.GetResponseStream())
+                {
+                    using (Stream s = File.Create("temp/" + filename))
+                    {
+                        responseStream.CopyTo(s);
+                        retval = filename;
+                        Console.WriteLine("{0} [{1} CP53] Run file saved: {2}", DateTime.Now, this.instrument.name, filename);
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("{0} [{1} ERROR] Run file download failed...", DateTime.Now, this.instrument.name);
+                Console.WriteLine(ex.Message);
+                Console.WriteLine();
+            }
+
+            return retval;
 
         }
+
 
     }
 }
