@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -17,8 +18,6 @@ namespace tdp_update_agent
 {
     class Agent
     {
-        public static List<Thread> startedThreads = new List<Thread>();
-
         static async Task Main(string[] args)
         {
 
@@ -26,7 +25,8 @@ namespace tdp_update_agent
             //String uri = "https://localhost:44385/dataHub";
             //String uri = "http://localhost/dataHub";
             String uri = "http://192.168.1.13/dataHub";
-            List<int> instrumentList = new List<int>();
+
+            Dictionary<InstrumentMod, Thread> instrumentThreads = new Dictionary<InstrumentMod, Thread>();
 
             Console.WriteLine("Starting database update agent...");
             Console.WriteLine("SignalR Hub: {0}", uri);
@@ -42,17 +42,22 @@ namespace tdp_update_agent
 
             while (true)
             {
+                InstrumentMod[] openthreadKeys = instrumentThreads.Keys.ToArray();
+
                 foreach (InstrumentMod instrument in _context.getInstruments())
                 {
-                    Update update = new Update(instrument, _connection);
-                    Thread thread = new Thread(new ThreadStart(update.Updater));
-                    thread.Start();
-                    startedThreads.Add(thread);
-                }
+                    if (!openthreadKeys.Contains(instrument))
+                    {
+                        instrumentThreads.Add(instrument, new Thread(new ThreadStart(new Update(instrument, _connection).Updater)));
+                        instrumentThreads[instrument].Start();
+                        Console.WriteLine("{0} [AGENT]: {1} thread opened!", DateTime.Now, instrument.name);
+                    }
 
-                foreach (Thread thread in startedThreads)
-                {
-                    thread.Join();
+                    foreach (InstrumentMod closedInstrument in (openthreadKeys.Except(_context.getInstruments())))
+                    {
+                        instrumentThreads[closedInstrument].Abort();
+                        Console.WriteLine("{0} [AGENT]: {1} thread closed!", DateTime.Now, closedInstrument.name);
+                    }
                 }
 
                 Thread.Sleep(10000);
@@ -95,13 +100,17 @@ namespace tdp_update_agent
             
         }
 
-        public void Updater(){ 
-            CheckUpdate();
-            Thread.Sleep(500);
-            GetRuns();
+        public void Updater()
+        {
+            while (true)
+            {
+                GetStatus();
+                GetRuns();
+                Thread.Sleep(10000);
+            }
         }
 
-        public void CheckUpdate()
+        public void GetStatus()
         {
             Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getInstrumentStatus");
             HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
@@ -124,7 +133,8 @@ namespace tdp_update_agent
                     var jobj = JObject.Parse(reader.ReadToEnd());
 
                     this.instrument.status = jobj.GetValue("instrumentStatus").ToString();
-                    _context.setStatus(this.instrument);
+                    this.instrument.lastPing = DateTime.Now.ToString();
+                    _context.updateInstrument(this.instrument);
 
                     this._connection.InvokeAsync("updatestatus", this.instrument.status, this.instrument.ID, this.instrument.getColor());
                 }
@@ -132,7 +142,7 @@ namespace tdp_update_agent
             catch (Exception ex)
             {
                 this.instrument.status = "OFFLINE";
-                _context.setStatus(this.instrument);
+                _context.updateInstrument(this.instrument);
                 this._connection.InvokeAsync("updatestatus", this.instrument.status, this.instrument.ID, this.instrument.getColor());
                 ln = new StringBuilder().AppendFormat("{0} [{2} ERROR]: {1}...", DateTime.Now, ex.Message, this.instrument.name).ToString();
                 Console.WriteLine(ln);
@@ -150,7 +160,7 @@ namespace tdp_update_agent
                 HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
                 request.ContentType = "application/json; charset=utf-8";
                 request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
-
+                
                 try
                 {
                     var response = request.GetResponse() as HttpWebResponse;
@@ -162,7 +172,8 @@ namespace tdp_update_agent
                         List<string> ids = new List<string>();
                         Array.ForEach(JsonConvert.DeserializeObject<Result[]>(reader.ReadToEnd()), res => ids.Add(res.uniqueId));
 
-                        foreach (string id in this._context.getUniqueIds(ids.ToArray())) {
+                        foreach (string id in this._context.getUniqueIds(ids.ToArray()))
+                        {
                             string dirpointer = GetRaw(id);
                             if (dirpointer != null)
                             {
@@ -170,7 +181,8 @@ namespace tdp_update_agent
                                 newRun.DirPointer = dirpointer;
                                 _context.addRun(newRun);
                             }
-                            else { 
+                            else
+                            {
                                 Console.WriteLine("{0} [{1} ERROR] Run NOT SAVED due to run download error.", DateTime.Now, this.instrument.name);
                                 Console.WriteLine("{0} [{1} ERROR] Exiting run/raw upload process...", DateTime.Now, this.instrument.name);
                                 break;
@@ -227,10 +239,10 @@ namespace tdp_update_agent
 
             request.ContentType = "application/json; charset=utf-8";
             request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
-
+            var response = request.GetResponse() as HttpWebResponse;
             try
             {
-                var response = request.GetResponse() as HttpWebResponse;
+                //var response = request.GetResponse() as HttpWebResponse;
 
                 using (Stream responseStream = response.GetResponseStream())
                 {

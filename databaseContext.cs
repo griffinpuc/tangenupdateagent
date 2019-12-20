@@ -29,6 +29,11 @@ namespace tdp_update_agent
             return (from InstrumentMod in InstrumentTable select InstrumentMod).ToArray(); 
         }
 
+        public int[] getInstrumentsID()
+        {
+            return (from InstrumentMod in InstrumentTable select InstrumentMod.ID).ToArray();
+        }
+
         public InstrumentMod[] getOnline()
         {
             return (from InstrumentMod in InstrumentTable where InstrumentMod.status.Equals("IDLE") select InstrumentMod).ToArray();
@@ -38,16 +43,11 @@ namespace tdp_update_agent
         {
             string[] db_ids = (from RunMod in RunTable select RunMod.uniqueId).ToArray();
 
-            //for (int i= 0; i < ids.Length; i++)
-            //{
-            //    Console.WriteLine(ids[i] + ":" + db_ids[i]);
-            //}
-
             return ids.Except(db_ids).ToArray();
         }
         
 
-        public void setStatus(InstrumentMod instrument)
+        public void updateInstrument(InstrumentMod instrument)
         {
             Update(instrument);
             SaveChanges();
