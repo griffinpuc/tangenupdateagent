@@ -21,8 +21,8 @@ namespace tdp_update_agent
         {
 
             databaseContext _context = new databaseContext();
-            String uri = "https://localhost:44385/dataHub";
-            //String uri = "http://localhost/dataHub";
+            //String uri = "https://localhost:44385/dataHub";
+            String uri = "http://localhost/dataHub";
             //String uri = "http://192.168.1.13/dataHub";
 
             List <InstrumentMod> openInstrumentsList = new List<InstrumentMod>();
@@ -44,6 +44,7 @@ namespace tdp_update_agent
                 {
                     closedInstrument.token.Cancel();
                     openInstrumentsList.Remove(closedInstrument);
+                    Console.WriteLine("{0} [AGENT]: {1} thread closed!", DateTime.Now, closedInstrument.name);
                 }
 
                 foreach (InstrumentMod instrument in _context.getInstruments())
@@ -111,16 +112,15 @@ namespace tdp_update_agent
         {
             while (true)
             {
-                this.token.ThrowIfCancellationRequested();
-                //try
-                //{
-                //    this.token.ThrowIfCancellationRequested();
-                //    this.instrument = _context.getFromID(this.instrument.ID);
-                //}
-                //catch(Exception ex)
-                //{
-                //    Console.WriteLine("{0} [AGENT]: {1} thread closed!", DateTime.Now, this.instrument.name);
-                //}
+
+                if (this.token.IsCancellationRequested)
+                {
+                    this._connection.InvokeAsync("updatestatus", "PAUSED", this.instrument.ID, "#FFA500");
+                    this.instrument.isActive = false;
+                    this.instrument.status = "PAUSED";
+                    this._context.updateInstrument(this.instrument);
+                    this.token.ThrowIfCancellationRequested();
+                }
 
                 if (this._connection.State.Equals(HubConnectionState.Disconnected))
                 {
