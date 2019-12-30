@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace tdp_update_agent.Models
@@ -14,6 +17,11 @@ namespace tdp_update_agent.Models
         public string status { get; set; }
         public string lastPing { get; set; }
         public DateTime dateAdded { get; set; }
+        public bool isActive { get; set; }
+
+        [JsonIgnore]
+        [NotMapped]
+        public CancellationTokenSource token { get; set; }
 
         public string getColor()
         {

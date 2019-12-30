@@ -26,12 +26,17 @@ namespace tdp_update_agent
 
         public InstrumentMod[] getInstruments()
         {
-            return (from InstrumentMod in InstrumentTable select InstrumentMod).ToArray(); 
+            return (from InstrumentMod in InstrumentTable where InstrumentMod.isActive select InstrumentMod).ToArray(); 
         }
 
         public int[] getInstrumentsID()
         {
             return (from InstrumentMod in InstrumentTable select InstrumentMod.ID).ToArray();
+        }
+
+        public InstrumentMod getFromID(int ID)
+        {
+            return (from InstrumentMod in InstrumentTable where InstrumentMod.ID == ID select InstrumentMod).FirstOrDefault();
         }
 
         public InstrumentMod[] getOnline()

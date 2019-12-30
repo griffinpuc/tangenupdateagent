@@ -4,11 +4,10 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,45 +21,43 @@ namespace tdp_update_agent
         {
 
             databaseContext _context = new databaseContext();
-            //String uri = "https://localhost:44385/dataHub";
+            String uri = "https://localhost:44385/dataHub";
             //String uri = "http://localhost/dataHub";
-            String uri = "http://192.168.1.13/dataHub";
+            //String uri = "http://192.168.1.13/dataHub";
 
-            Dictionary<InstrumentMod, Thread> instrumentThreads = new Dictionary<InstrumentMod, Thread>();
+            List <InstrumentMod> openInstrumentsList = new List<InstrumentMod>();
 
             Console.WriteLine("Starting database update agent...");
             Console.WriteLine("SignalR Hub: {0}", uri);
             Console.WriteLine("Establishing connection to webserver...");
 
             ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
-            Signal signal = new Signal();
-            await signal.Start(uri);
-
-            HubConnection _connection = signal.getConnection();
 
             Console.WriteLine("----------------------------");
 
             while (true)
             {
-                InstrumentMod[] openthreadKeys = instrumentThreads.Keys.ToArray();
+
+                InstrumentMod[] openInstruments = openInstrumentsList.ToArray();
+
+                foreach (InstrumentMod closedInstrument in (openInstruments.Except(_context.getInstruments())))
+                {
+                    closedInstrument.token.Cancel();
+                    openInstrumentsList.Remove(closedInstrument);
+                }
 
                 foreach (InstrumentMod instrument in _context.getInstruments())
                 {
-                    if (!openthreadKeys.Contains(instrument))
+                    if (!openInstruments.Contains(instrument))
                     {
-                        instrumentThreads.Add(instrument, new Thread(new ThreadStart(new Update(instrument, _connection).Updater)));
-                        instrumentThreads[instrument].Start();
+                        openInstrumentsList.Add(instrument);
+                        instrument.token = new CancellationTokenSource();
+                        Task.Run(() => new Update(instrument, uri, instrument.token.Token), instrument.token.Token);
                         Console.WriteLine("{0} [AGENT]: {1} thread opened!", DateTime.Now, instrument.name);
-                    }
-
-                    foreach (InstrumentMod closedInstrument in (openthreadKeys.Except(_context.getInstruments())))
-                    {
-                        instrumentThreads[closedInstrument].Abort();
-                        Console.WriteLine("{0} [AGENT]: {1} thread closed!", DateTime.Now, closedInstrument.name);
                     }
                 }
 
-                Thread.Sleep(10000);
+                Thread.Sleep(5000);
             }
 
 
@@ -88,15 +85,25 @@ namespace tdp_update_agent
 
         InstrumentMod instrument;
         HubConnection _connection;
+        string uri;
         databaseContext _context;
+        CancellationToken token;
 
         string ln;
 
-        public Update(InstrumentMod instrument, HubConnection connection)
+        public Update(InstrumentMod instrument, string uri, CancellationToken tok)
         {
             this.instrument = instrument;
             this._context = new databaseContext();
-            this._connection = connection;
+            this.uri = uri;
+            this.token = tok;
+
+            Signal signal = new Signal();
+            signal.Start(this.uri);
+
+            this._connection = signal.getConnection();
+
+            Updater();
             
         }
 
@@ -104,6 +111,24 @@ namespace tdp_update_agent
         {
             while (true)
             {
+                this.token.ThrowIfCancellationRequested();
+                //try
+                //{
+                //    this.token.ThrowIfCancellationRequested();
+                //    this.instrument = _context.getFromID(this.instrument.ID);
+                //}
+                //catch(Exception ex)
+                //{
+                //    Console.WriteLine("{0} [AGENT]: {1} thread closed!", DateTime.Now, this.instrument.name);
+                //}
+
+                if (this._connection.State.Equals(HubConnectionState.Disconnected))
+                {
+                    Signal signal = new Signal();
+                    signal.Start(uri);
+                    this._connection = signal.getConnection();
+                }
+
                 GetStatus();
                 GetRuns();
                 Thread.Sleep(10000);
@@ -175,12 +200,16 @@ namespace tdp_update_agent
                         foreach (string id in this._context.getUniqueIds(ids.ToArray()))
                         {
                             string dirpointer = GetRaw(id);
+
                             if (dirpointer != null)
                             {
                                 RunMod newRun = GetRun(id);
-                                newRun.DirPointer = dirpointer;
+                                newRun.fileName = dirpointer.Split(" ")[0];
+                                newRun.directoryPath = dirpointer.Split(" ")[1];
+                                GetLog(id);
                                 _context.addRun(newRun);
                             }
+
                             else
                             {
                                 Console.WriteLine("{0} [{1} ERROR] Run NOT SAVED due to run download error.", DateTime.Now, this.instrument.name);
@@ -231,6 +260,7 @@ namespace tdp_update_agent
             Thread.Sleep(1000);
             string retval = null;
             string filename = uniqueid + "_RAW.json";
+            string logfilename = uniqueid + "_LOG.txt";
 
             Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getRawResult?id=" + uniqueid);
             HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
@@ -246,11 +276,26 @@ namespace tdp_update_agent
 
                 using (Stream responseStream = response.GetResponseStream())
                 {
-                    using (Stream s = File.Create("temp/" + filename))
+                    string filepath = (@"D:\datadump\" + DateTime.Now.Year + DateTime.Now.Month);
+
+                    if(!new DirectoryInfo(filepath).Exists)
+                    {
+                        Directory.CreateDirectory(filepath);
+                    }
+
+                    retval = filename + " " + filepath;
+
+                    using (Stream s = File.Create(filepath + "\\" + filename))
                     {
                         responseStream.CopyTo(s);
-                        retval = filename;
+                        convertRaw(filepath + "\\" + filename);
                         Console.WriteLine("{0} [{1} CP53] Run file saved: {2}", DateTime.Now, this.instrument.name, filename);
+                    }
+
+                    using (Stream s = File.Create(filepath + "\\" + logfilename))
+                    {
+                        responseStream.CopyTo(s);
+                        Console.WriteLine("{0} [{1} CP53] Log file saved: {2}", DateTime.Now, this.instrument.name, filename);
                     }
                 }
             }
@@ -263,6 +308,54 @@ namespace tdp_update_agent
 
             return retval;
 
+        }
+
+
+        public void GetLog(string uniqueid)
+        {
+            string retval = null;
+            string logfilename = uniqueid + "_LOG.txt";
+
+            Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getLogResult?id=" + uniqueid);
+            HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
+
+            Console.WriteLine(DateTime.Now + " [GET LOG FILE]: " + uniqueid);
+
+            request.ContentType = "application/json; charset=utf-8";
+            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
+            var response = request.GetResponse() as HttpWebResponse;
+            try
+            {
+
+                using (Stream responseStream = response.GetResponseStream())
+                {
+                    string filepath = (@"D:\datadump\" + DateTime.Now.Year + DateTime.Now.Month);
+
+                    if (!new DirectoryInfo(filepath).Exists)
+                    {
+                        Directory.CreateDirectory(filepath);
+                    }
+
+                    using (Stream s = File.Create(filepath + "\\" + logfilename))
+                    {
+                        responseStream.CopyTo(s);
+                        Console.WriteLine("{0} [{1} CP53] Log file saved: {2}", DateTime.Now, this.instrument.name, logfilename);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("{0} [{1} ERROR] Log file download failed...", DateTime.Now, this.instrument.name);
+                Console.WriteLine(ex.Message);
+                Console.WriteLine();
+            }
+        }
+
+        public void convertRaw(string path)
+        {
+            ProcessStartInfo info = new ProcessStartInfo("C:\\Convert\\tangendataconvert.exe");
+            info.Arguments = "-p " + path;
+            Process.Start(info);
         }
 
 

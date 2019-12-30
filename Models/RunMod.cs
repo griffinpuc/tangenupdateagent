@@ -22,7 +22,9 @@ namespace tdp_update_agent.Models
         public virtual ICollection<WellMod> wells { get; set; }
 
         [JsonIgnore]
-        public string DirPointer { get; set; }
+        public string directoryPath { get; set; }
+        [JsonIgnore]
+        public string fileName { get; set; }
 
         public string getJSON()
         {
