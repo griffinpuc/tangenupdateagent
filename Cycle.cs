@@ -20,7 +20,6 @@ namespace tdp_update_agent
         InstrumentMod instrument;
         HubConnection connection;
         databaseContext context;
-        CancellationToken token;
         string uri;
         string filepath;
 
@@ -71,12 +70,15 @@ namespace tdp_update_agent
 
                     if (GetRaw(id))
                     {
-                        GetLog(id);
-                        RunMod newrun = GetRun(id);
-                        newrun.directoryPath = this.filepath;
-                        newrun.fileName = id + "_RAW.txt";
+                        if (GetLog(id))
+                        {
+                            RunMod newrun = GetRun(id);
+                            newrun.directoryPath = this.filepath;
+                            newrun.fileName = id + "_RAW.txt";
 
-                        this.context.addRun(newrun);
+                            this.context.addRun(newrun);
+                        }
+
                     }
                 }
             }
@@ -129,42 +131,46 @@ namespace tdp_update_agent
 
         private string[] GetRuns()
         {
-                Console.WriteLine(DateTime.Now + " [{0} GET RUNS]", this.instrument.name);
-                Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getResults");
-                HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
-                request.ContentType = "application/json; charset=utf-8";
-                request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
+            Console.WriteLine(DateTime.Now + " [{0} GET RUNS]", this.instrument.name);
+            //Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/getResults");
+            string x = this.context.getLastUnique(instrument.ID);
+            Uri URI = new Uri("HTTP://" + this.instrument.localAddress + "/tdx/runs?limit=0&after_id=" + (this.context.getLastUnique(instrument.ID) ?? "0"));
 
-                try
+            HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
+            request.ContentType = "application/json; charset=utf-8";
+            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
+
+            try
+            {
+                var response = request.GetResponse() as HttpWebResponse;
+
+                if (response.StatusCode.Equals(HttpStatusCode.OK))
                 {
-                    var response = request.GetResponse() as HttpWebResponse;
-
-                    if (response.StatusCode.Equals(HttpStatusCode.OK))
+                    using (Stream responseStream = response.GetResponseStream())
                     {
-                        using (Stream responseStream = response.GetResponseStream())
-                        {
-                            StreamReader reader = new StreamReader(responseStream, Encoding.UTF8);
-                            JsonSerializer serializer = new JsonSerializer();
+                        StreamReader reader = new StreamReader(responseStream, Encoding.UTF8);
+                        JsonSerializer serializer = new JsonSerializer();
 
-                            List<string> ids = new List<string>();
-                            Array.ForEach(JsonConvert.DeserializeObject<Result[]>(reader.ReadToEnd()), res => ids.Add(res.uniqueId));
-                            return ids.ToArray();
-                        }
+                        List<string> ids = new List<string>();
+
+                        Array.ForEach(JsonConvert.DeserializeObject<GetResults>(reader.ReadToEnd()).runs, res => ids.Add(res.uniqueId));
+                        return ids.ToArray();
                     }
-                    else
-                    {
-                        logMessage("Got code other than 200- aborting.");
-                        return null;
-                    }
-
-
                 }
-
-                catch (Exception ex)
+                else
                 {
-                    logMessage(ex.Message);
+                    logMessage("Got code other than 200- aborting.");
                     return null;
                 }
+
+
+            }
+
+            catch (Exception ex)
+            {
+                logMessage(ex.Message);
+                return null;
+            }
 
         }
 

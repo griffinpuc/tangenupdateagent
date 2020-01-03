@@ -66,6 +66,12 @@ namespace tdp_update_agent
 
             return ids.Except(db_ids).ToArray();
         }
+
+        public string getLastUnique(int instrumentID)
+        {
+            string unique = (from RunMod in RunTable where RunMod.instrumentName.Equals(getFromID(instrumentID).name) select RunMod.uniqueId).FirstOrDefault() ?? null;
+            return unique;
+        }
         
 
         public void updateInstrument(InstrumentMod instrument)
