@@ -19,7 +19,7 @@ namespace tdp_update_agent
 
         InstrumentMod instrument;
         HubConnection connection;
-        databaseContext context = new databaseContext();
+        databaseContext context;
         CancellationToken token;
         string uri;
         string filepath;
@@ -31,70 +31,55 @@ namespace tdp_update_agent
             this.connection.InvokeAsync("streamline", ln);
         }
 
-        public Cycle(InstrumentMod instrument, string uri, CancellationToken tok)
+        public Cycle(InstrumentMod instrument, string uri)
         {
             this.instrument = instrument;
             this.context = new databaseContext();
             this.uri = uri;
-            this.token = tok;
 
             Signal signal = new Signal();
             signal.Start(this.uri);
 
             this.connection = signal.getConnection();
 
-            StartTask();
         }
 
-        private void StartTask()
+        public HubConnection getConnection()
         {
-            while (true)
+            return this.connection;
+        }
+
+        public void StartTask()
+        {
+            if (this.connection.State.Equals(HubConnectionState.Disconnected))
             {
-
-
-                if (this.token.IsCancellationRequested)
-                {
-                    this.connection.InvokeAsync("updatestatus", "PAUSED", this.instrument.ID, "#FFA500");
-                    this.instrument.isActive = false;
-                    this.instrument.status = "PAUSED";
-                    this.context.updateInstrument(this.instrument);
-                    this.token.ThrowIfCancellationRequested();
-                }
-
-                if (this.connection.State.Equals(HubConnectionState.Disconnected))
-                {
-                    Signal signal = new Signal();
-                    signal.Start(uri);
-                    this.connection = signal.getConnection();
-                }
-
-                if (GetStatus())
-                {
-                    foreach (string id in this.context.getUniqueIds(GetRuns() ?? Enumerable.Empty<string>().ToArray()))
-                    {
-                        this.filepath = (@"C:\datadump\" + id.Substring(0, 6));
-
-                        if (!new DirectoryInfo(this.filepath).Exists)
-                        {
-                            Directory.CreateDirectory(this.filepath);
-                        }
-
-                        if (GetRaw(id))
-                        {
-                            GetLog(id);
-                            RunMod newrun = GetRun(id);
-                            newrun.directoryPath = this.filepath;
-                            newrun.fileName = id + "_RAW.txt";
-
-                            this.context.addRun(newrun);
-                        }
-                    }
-                }
-
-                Thread.Sleep(10000);
+                Signal signal = new Signal();
+                signal.Start(uri);
+                this.connection = signal.getConnection();
             }
 
+            if (GetStatus())
+            {
+                foreach (string id in this.context.getUniqueIds(GetRuns() ?? Enumerable.Empty<string>().ToArray()))
+                {
+                    this.filepath = (@"D:\datadump\" + id.Substring(0, 6));
 
+                    if (!new DirectoryInfo(this.filepath).Exists)
+                    {
+                        Directory.CreateDirectory(this.filepath);
+                    }
+
+                    if (GetRaw(id))
+                    {
+                        GetLog(id);
+                        RunMod newrun = GetRun(id);
+                        newrun.directoryPath = this.filepath;
+                        newrun.fileName = id + "_RAW.txt";
+
+                        this.context.addRun(newrun);
+                    }
+                }
+            }
         }
 
         private bool GetStatus()
@@ -207,7 +192,7 @@ namespace tdp_update_agent
                         {
                             responseStream.CopyTo(s);
 
-                            ProcessStartInfo info = new ProcessStartInfo(@"C:\Users\griff\Workspace\tangendataconvert\tangendataconvert\bin\Release\netcoreapp3.0\tangendataconvert.exe");
+                            ProcessStartInfo info = new ProcessStartInfo(@"C:\Convert\tangendataconvert.exe");
                             info.Arguments = "-p " + this.filepath + "\\" + filename;
                             Process.Start(info);
 

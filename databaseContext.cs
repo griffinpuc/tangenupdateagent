@@ -9,8 +9,8 @@ namespace tdp_update_agent
     class databaseContext : DbContext
     {
 
-        //String connection = @"Data Source=tangen-web-01;Initial Catalog=pprd;User ID=SQL_TDP_USER;Password=November2019!;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
-        string connection = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=tangenportalv2;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+        String connection = @"Data Source=tangen-web-01;Initial Catalog=pprd;User ID=SQL_TDP_USER;Password=November2019!;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+        //string connection = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=tangenportalv2;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -24,7 +24,7 @@ namespace tdp_update_agent
 
         public bool getPaused(int uniqueid)
         {
-            if( (from InstrumentMod in InstrumentTable select InstrumentMod.isActive).Single())
+            if( (from InstrumentMod in InstrumentTable where InstrumentMod.ID == uniqueid select InstrumentMod.isActive).Single())
             {
                 return true;
             }
