@@ -9,7 +9,8 @@ namespace tdp_update_agent
     class databaseContext : DbContext
     {
 
-        String connection = @"Data Source=tangen-web-01;Initial Catalog=portal-pprd;User ID=SQL_TDP_USER;Password=November2019!;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+        //String connection = @"Data Source=tangen-web-01;Initial Catalog=pprd;User ID=SQL_TDP_USER;Password=November2019!;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+        string connection = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=tangenportalv2;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -21,12 +22,27 @@ namespace tdp_update_agent
             return this.connection;
         }
 
+        public bool getPaused(int uniqueid)
+        {
+            if( (from InstrumentMod in InstrumentTable select InstrumentMod.isActive).Single())
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         public DbSet<InstrumentMod> InstrumentTable { get; set; }
         public DbSet<RunMod> RunTable { get; set; }
 
         public InstrumentMod[] getInstruments()
         {
             return (from InstrumentMod in InstrumentTable where InstrumentMod.isActive select InstrumentMod).ToArray(); 
+        }
+
+        public int[] getInstrumentsIDS()
+        {
+            return (from InstrumentMod in InstrumentTable where InstrumentMod.isActive select InstrumentMod.ID).ToArray();
         }
 
         public int[] getInstrumentsID()

@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Text;
 
@@ -7,7 +8,8 @@ namespace tdp_update_agent.Models
 {
     public class RunMod
     {
-        public int Id { get; set; }
+        [Key]
+        public int RunId { get; set; }
         public string sampleId { get; set; }
         public string uniqueId { get; set; }
         public string dateTime { get; set; }
@@ -40,6 +42,11 @@ namespace tdp_update_agent.Models
         public string outcomeCode { get; set; }
         public string outcomeString { get; set; }
 
+        [JsonIgnore]
+        public int RunModId { get; set; }
+        [JsonIgnore]
+        public virtual RunMod RunMod { get; set; }
+
     }
 
     public class TargetMod
@@ -51,6 +58,11 @@ namespace tdp_update_agent.Models
         public string outcomeCode { get; set; }
         public string outcomeString { get; set; }
 
+        [JsonIgnore]
+        public int RunModId { get; set; }
+        [JsonIgnore]
+        public virtual RunMod RunMod { get; set; }
+
     }
 
     public class WellMod
@@ -60,5 +72,10 @@ namespace tdp_update_agent.Models
         public string wellId { get; set; }
         public string species { get; set; }
         public string cq { get; set; }
+
+        [JsonIgnore]
+        public int RunModId { get; set; }
+        [JsonIgnore]
+        public virtual RunMod RunMod { get; set; }
     }
 }
