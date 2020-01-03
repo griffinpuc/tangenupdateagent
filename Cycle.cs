@@ -91,7 +91,7 @@ namespace tdp_update_agent
 
             request.ContentType = "application/json; charset=utf-8";
             request.Method = "GET";
-            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
+            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes(this.instrument.username+":"+this.instrument.password));
 
             logMessage("Getting status...");
 
@@ -116,7 +116,12 @@ namespace tdp_update_agent
                     this.connection.InvokeAsync("updatestatus", this.instrument.status, this.instrument.ID, this.instrument.getColor());
                 }
 
-                return true;
+                if (this.instrument.status.Equals("IDLE"))
+                {
+                    return true;
+                }
+
+                return false;
             }
 
             catch (Exception ex)
@@ -138,7 +143,7 @@ namespace tdp_update_agent
 
             HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
             request.ContentType = "application/json; charset=utf-8";
-            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
+            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes(this.instrument.username + ":" + this.instrument.password));
 
             try
             {
@@ -184,7 +189,7 @@ namespace tdp_update_agent
             Console.WriteLine(DateTime.Now + " [GET RAW FILE]: " + uniqueid);
 
             request.ContentType = "application/json; charset=utf-8";
-            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
+            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes(this.instrument.username + ":" + this.instrument.password));
             var response = request.GetResponse() as HttpWebResponse;
 
             if (response.StatusCode.Equals(HttpStatusCode.OK))
@@ -232,7 +237,7 @@ namespace tdp_update_agent
             HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(URI);
 
             request.ContentType = "application/json; charset=utf-8";
-            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
+            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes(this.instrument.username + ":" + this.instrument.password));
             var response = request.GetResponse() as HttpWebResponse;
             try
             {
@@ -263,7 +268,7 @@ namespace tdp_update_agent
             Console.WriteLine(DateTime.Now + " [GET RUN]: " + uniqueid);
 
             request.ContentType = "application/json; charset=utf-8";
-            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes("admin:PASSWORD"));
+            request.Headers["Authorization"] = "Basic " + Convert.ToBase64String(Encoding.Default.GetBytes(this.instrument.username + ":" + this.instrument.password));
 
             var response = request.GetResponse() as HttpWebResponse;
 

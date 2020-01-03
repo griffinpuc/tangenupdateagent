@@ -24,7 +24,9 @@ namespace tdp_update_agent
 
         public bool getPaused(int uniqueid)
         {
-            if( (from InstrumentMod in InstrumentTable where InstrumentMod.ID == uniqueid select InstrumentMod.isActive).Single())
+            bool status = (from InstrumentMod in InstrumentTable where InstrumentMod.ID == uniqueid select InstrumentMod.isActive).Single();
+
+            if (status)
             {
                 return true;
             }

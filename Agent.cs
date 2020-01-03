@@ -22,8 +22,8 @@ namespace tdp_update_agent
 
             databaseContext _context = new databaseContext();
             //String uri = "https://localhost:44385/dataHub";
-            String uri = "http://localhost/dataHub";
-            //String uri = "http://192.168.1.13/dataHub";
+            //String uri = "http://localhost/dataHub";
+            String uri = "http://192.168.1.13/dataHub";
 
             //List <int> openInstrumentsList = new List<int>();
             Dictionary<int, CancellationTokenSource> openInstruments = new Dictionary<int, CancellationTokenSource>();
@@ -43,7 +43,15 @@ namespace tdp_update_agent
                     if (!openInstruments[closedInstrument].Token.IsCancellationRequested)
                     {
                         openInstruments[closedInstrument].Cancel();
-                        Console.WriteLine("{0} >> Closed instrument with ID of: {1}", DateTime.Now, _context.getFromID(closedInstrument).name);
+                        try
+                        {
+                            Console.WriteLine("{0} >> Closed instrument with ID of: {1}", DateTime.Now, _context.getFromID(closedInstrument).name);
+                        }
+                        catch
+                        {
+                            Console.WriteLine("{0} >> Closed deleted instrument...", DateTime.Now);
+                        }
+                        
                     }
                 }
 
