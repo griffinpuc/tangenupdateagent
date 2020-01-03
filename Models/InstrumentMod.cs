@@ -20,6 +20,7 @@ namespace tdp_update_agent.Models
         public bool isActive { get; set; }
         public string username { get; set; }
         public string password { get; set; }
+        public string storagepath { get; set; }
 
         [JsonIgnore]
         [NotMapped]

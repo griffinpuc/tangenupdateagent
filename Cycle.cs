@@ -61,7 +61,7 @@ namespace tdp_update_agent
             {
                 foreach (string id in this.context.getUniqueIds(GetRuns() ?? Enumerable.Empty<string>().ToArray()))
                 {
-                    this.filepath = (@"D:\datadump\" + id.Substring(0, 6));
+                    this.filepath = (this.instrument.storagepath + "\\" + id.Substring(0, 6));
 
                     if (!new DirectoryInfo(this.filepath).Exists)
                     {
