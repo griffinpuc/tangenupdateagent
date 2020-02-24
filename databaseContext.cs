@@ -9,9 +9,8 @@ namespace tdp_update_agent
     class databaseContext : DbContext
     {
 
-        String connection = @"Data Source=tangen-web-01;Initial Catalog=pprd;User ID=SQL_TDP_USER;Password=November2019!;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
-        //string connection = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=tangenportalv2;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
-
+        String connection;
+        
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseSqlServer(connection);
